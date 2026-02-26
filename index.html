@@ -3,13 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Tetris — Play.fun</title>
+  <title>Solana Tetris — Play.fun</title>
 
-  <!-- Play.fun verification (replace with your wallet address after claiming ownership) -->
-  <meta name="playfun-verification" content="YOUR_PLAYFUN_WALLET_ADDRESS">
-
-  <!-- Play.fun API key (replace with your game API key after registration) -->
-  <meta name="x-ogp-key" content="YOUR_GAME_API_KEY">
+  <!-- Play.fun API key -->
+  <meta name="x-ogp-key" content="5da8249e-0012-4dd4-8a3b-2e804ed7339a" id="ogp-key-meta" />
 
   <style>
     * {
@@ -407,7 +404,7 @@
 
   <!-- Start screen overlay -->
   <div id="start-screen" class="overlay">
-    <h1>TETRIS</h1>
+    <h1>SOLANA TETRIS</h1>
     <p>Stack blocks, clear lines, earn points!</p>
     <div class="start-controls">
       <div class="start-control-item">
@@ -733,13 +730,43 @@
         return;
       }
       try {
-        ogp = new OpenGameSDK({ ui: { usePointsWidget: true } });
-        ogp.init({ gameId: 'tetris-playfun' });
+        ogp = new OpenGameSDK({
+          ui: {
+            usePointsWidget: true,
+            useCustomUI: false,
+            theme: 'dark'
+          },
+          logLevel: 'debug'
+        });
 
         ogp.on('OnReady', function() {
           sdkReady = true;
           console.log('Play.fun SDK is ready!');
         });
+
+        ogp.on('SessionStarted', function() {
+          console.log('Play.fun session started');
+        });
+
+        ogp.on('SavePointsSuccess', function() {
+          console.log('Points saved successfully!');
+        });
+
+        ogp.on('SavePointsFailed', function() {
+          console.warn('Points save failed!');
+        });
+
+        ogp.onAll(function(eventName, data) {
+          console.log('Play.fun Event:', eventName, data);
+        });
+
+        ogp.init({ gameId: '571b0545-f172-493a-b5d6-eed4483e66be' })
+          .then(function() {
+            console.log('OpenGameSDK Initialized successfully');
+          })
+          .catch(function(err) {
+            console.error('OpenGameSDK init error:', err);
+          });
       } catch (e) {
         console.warn('Play.fun SDK init failed, running in standalone mode.', e);
         sdkReady = false;
@@ -747,9 +774,10 @@
     }
 
     function sendPoints(points) {
-      if (ogp && sdkReady && points > 0) {
+      if (ogp && points > 0) {
         try {
           ogp.addPoints(points);
+          console.log('addPoints(' + points + ') called');
         } catch (e) {
           console.warn('Failed to send points to Play.fun:', e);
         }
@@ -757,8 +785,9 @@
     }
 
     async function endGameSession() {
-      if (ogp && sdkReady) {
+      if (ogp) {
         try {
+          console.log('Calling endGame()...');
           await ogp.endGame();
           console.log('Game session ended on Play.fun');
         } catch (e) {
