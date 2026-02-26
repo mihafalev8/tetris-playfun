@@ -330,59 +330,8 @@
     </div>
   </div>
 
-  <!-- Play.fun Browser SDK -->
-  <script src="https://sdk.play.fun"></script>
-
+  <!-- GAME CODE FIRST, SDK LOADED AFTER -->
   <script>
-    //=========================================================================
-    // Play.fun SDK Integration
-    //=========================================================================
-
-    let ogp = null;
-    let sdkReady = false;
-    let pendingPoints = 0;
-
-    function initPlayFunSDK() {
-      try {
-        ogp = new OpenGameSDK({ ui: { usePointsWidget: true } });
-        ogp.init({ gameId: 'tetris-playfun' });
-
-        ogp.on('OnReady', function() {
-          sdkReady = true;
-          console.log('Play.fun SDK is ready!');
-        });
-      } catch (e) {
-        console.warn('Play.fun SDK not available, running in standalone mode.', e);
-        sdkReady = false;
-      }
-    }
-
-    // Send points to Play.fun
-    function sendPoints(points) {
-      if (ogp && sdkReady && points > 0) {
-        try {
-          ogp.addPoints(points);
-        } catch (e) {
-          console.warn('Failed to send points to Play.fun:', e);
-        }
-      }
-    }
-
-    // End game session on Play.fun
-    async function endGameSession() {
-      if (ogp && sdkReady) {
-        try {
-          await ogp.endGame();
-          console.log('Game session ended on Play.fun');
-        } catch (e) {
-          console.warn('Failed to end game session on Play.fun:', e);
-        }
-      }
-    }
-
-    // Initialize SDK
-    initPlayFunSDK();
-
     //=========================================================================
     // Helper functions
     //=========================================================================
@@ -394,14 +343,6 @@
     function random(min, max) { return (min + (Math.random() * (max - min))); }
 
     function randomChoice(choices) { return choices[Math.round(random(0, choices.length - 1))]; }
-
-    if (!window.requestAnimationFrame) {
-      window.requestAnimationFrame = window.webkitRequestAnimationFrame ||
-        window.mozRequestAnimationFrame ||
-        window.oRequestAnimationFrame ||
-        window.msRequestAnimationFrame ||
-        function(callback) { window.setTimeout(callback, 1000 / 60); };
-    }
 
     //=========================================================================
     // Game constants
@@ -436,6 +377,58 @@
         rows,
         level,
         step;
+
+    // Game loop control
+    var gameLoopRunning = false;
+    var gameLoopId = null;
+
+    //=========================================================================
+    // Play.fun SDK Integration
+    //=========================================================================
+
+    var ogp = null;
+    var sdkReady = false;
+
+    function initPlayFunSDK() {
+      if (typeof OpenGameSDK === 'undefined') {
+        console.log('Play.fun SDK not loaded yet, will retry...');
+        setTimeout(initPlayFunSDK, 1000);
+        return;
+      }
+      try {
+        ogp = new OpenGameSDK({ ui: { usePointsWidget: true } });
+        ogp.init({ gameId: 'tetris-playfun' });
+
+        ogp.on('OnReady', function() {
+          sdkReady = true;
+          console.log('Play.fun SDK is ready!');
+        });
+      } catch (e) {
+        console.warn('Play.fun SDK init failed, running in standalone mode.', e);
+        sdkReady = false;
+      }
+    }
+
+    function sendPoints(points) {
+      if (ogp && sdkReady && points > 0) {
+        try {
+          ogp.addPoints(points);
+        } catch (e) {
+          console.warn('Failed to send points to Play.fun:', e);
+        }
+      }
+    }
+
+    async function endGameSession() {
+      if (ogp && sdkReady) {
+        try {
+          await ogp.endGame();
+          console.log('Game session ended on Play.fun');
+        } catch (e) {
+          console.warn('Failed to end game session on Play.fun:', e);
+        }
+      }
+    }
 
     //=========================================================================
     // Tetris pieces with neon colors
@@ -488,23 +481,32 @@
     }
 
     //=========================================================================
-    // Game loop
+    // Game loop — robust version
     //=========================================================================
 
-    function run() {
-      addEvents();
-      var last = now = timestamp();
+    function startGameLoop() {
+      if (gameLoopRunning) return; // already running
+      gameLoopRunning = true;
+      var last = timestamp();
 
       function frame() {
-        now = timestamp();
+        if (!gameLoopRunning) return; // stop if flagged
+        var now = timestamp();
         update(Math.min(1, (now - last) / 1000.0));
         draw();
         last = now;
-        requestAnimationFrame(frame, canvas);
+        gameLoopId = requestAnimationFrame(frame);
       }
 
-      resize();
-      frame();
+      gameLoopId = requestAnimationFrame(frame);
+    }
+
+    function stopGameLoop() {
+      gameLoopRunning = false;
+      if (gameLoopId) {
+        cancelAnimationFrame(gameLoopId);
+        gameLoopId = null;
+      }
     }
 
     function addEvents() {
@@ -513,7 +515,6 @@
     }
 
     function resize() {
-      // Calculate optimal canvas size
       var maxW, maxH;
       var isMobile = window.innerWidth <= 600;
 
@@ -558,7 +559,6 @@
         ev.preventDefault();
     }
 
-    // Mobile touch controls
     function handleTouch(action) {
       if (!playing) return;
       switch (action) {
@@ -578,12 +578,18 @@
       get('gameover-screen').classList.add('hidden');
       reset();
       playing = true;
+      // Ensure game loop is running
+      stopGameLoop();
+      startGameLoop();
     }
 
     function restartGame() {
       get('gameover-screen').classList.add('hidden');
       reset();
       playing = true;
+      // Ensure game loop is running
+      stopGameLoop();
+      startGameLoop();
     }
 
     async function lose() {
@@ -599,10 +605,7 @@
     function setVisualScore(n) { vscore = n || score; invalidateScore(); }
     function setScore(n) { score = n; setVisualScore(n); }
     function addScore(n) {
-      var oldScore = score;
       score = score + n;
-
-      // Send incremental points to Play.fun
       sendPoints(n);
     }
     function clearScore() { setScore(0); }
@@ -699,9 +702,9 @@
 
     function removeLines() {
       var x, y, complete, n = 0;
-      for (y = ny; y > 0; --y) {
+      for (y = ny ; y > 0 ; --y) {
         complete = true;
-        for (x = 0; x < nx; ++x) {
+        for (x = 0 ; x < nx ; ++x) {
           if (!getBlock(x, y))
             complete = false;
         }
@@ -713,14 +716,14 @@
       }
       if (n > 0) {
         addRows(n);
-        addScore(100 * Math.pow(2, n - 1)); // 1: 100, 2: 200, 3: 400, 4: 800
+        addScore(100 * Math.pow(2, n - 1));
       }
     }
 
     function removeLine(n) {
       var x, y;
-      for (y = n; y >= 0; --y) {
-        for (x = 0; x < nx; ++x)
+      for (y = n ; y >= 0 ; --y) {
+        for (x = 0 ; x < nx ; ++x)
           setBlock(x, y, (y == 0) ? null : getBlock(x, y - 1));
       }
     }
@@ -773,8 +776,8 @@
           drawPiece(ctx, current.type, current.x, current.y, current.dir);
 
         var x, y, block;
-        for (y = 0; y < ny; y++) {
-          for (x = 0; x < nx; x++) {
+        for (y = 0 ; y < ny ; y++) {
+          for (x = 0 ; x < nx ; x++) {
             if (block = getBlock(x, y))
               drawBlock(ctx, x, y, block.color);
           }
@@ -835,31 +838,34 @@
       var bx = x * dx;
       var by = y * dy;
 
-      // Glow effect
       ctx.shadowColor = color;
       ctx.shadowBlur = 8;
 
       ctx.fillStyle = color;
       ctx.fillRect(bx + 1, by + 1, dx - 2, dy - 2);
 
-      // Inner highlight
       ctx.shadowBlur = 0;
       ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
       ctx.fillRect(bx + 2, by + 2, dx - 6, 2);
       ctx.fillRect(bx + 2, by + 2, 2, dy - 6);
 
-      // Border
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
       ctx.strokeRect(bx + 1, by + 1, dx - 2, dy - 2);
     }
 
     //=========================================================================
-    // Start the game loop
+    // Initialize — setup events and sizing, but DON'T start game loop yet
     //=========================================================================
 
-    run();
+    addEvents();
+    resize();
+    // Pre-initialize pieces for the first game
+    next = randomPiece();
 
   </script>
+
+  <!-- Play.fun Browser SDK — loaded ASYNC so it doesn't block game code -->
+  <script src="https://sdk.play.fun" async onload="initPlayFunSDK()" onerror="console.warn('Play.fun SDK failed to load, running standalone.')"></script>
 
 </body>
 </html>
