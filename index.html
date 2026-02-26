@@ -55,7 +55,7 @@
     #sidebar {
       display: flex;
       flex-direction: column;
-      gap: 15px;
+      gap: 12px;
       min-width: 140px;
     }
 
@@ -97,6 +97,80 @@
     #rows-value {
       color: #7cff6e;
       text-shadow: 0 0 10px rgba(124, 255, 110, 0.5);
+    }
+
+    /* Controls info panel */
+    .controls-panel {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 12px;
+      backdrop-filter: blur(10px);
+    }
+
+    .controls-panel .panel-title {
+      margin-bottom: 10px;
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 0.78em;
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    .control-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .key-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 22px;
+      padding: 0 6px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      font-size: 0.85em;
+      color: #00e5ff;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    /* Music toggle button */
+    #music-toggle {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 1.2em;
+      backdrop-filter: blur(5px);
+      z-index: 200;
+      transition: all 0.2s;
+    }
+
+    #music-toggle:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #00e5ff;
+    }
+
+    #music-toggle.active {
+      color: #00e5ff;
+      border-color: #00e5ff;
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
     }
 
     /* Overlay screens */
@@ -142,6 +216,42 @@
       font-size: 1.1em;
       color: rgba(255, 255, 255, 0.6);
       margin-bottom: 25px;
+    }
+
+    /* Start screen controls hint */
+    .start-controls {
+      display: flex;
+      gap: 30px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .start-control-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .start-key {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      border-radius: 8px;
+      font-size: 1.3em;
+      color: #00e5ff;
+    }
+
+    .start-control-label {
+      font-size: 0.75em;
+      color: rgba(255, 255, 255, 0.45);
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
     .btn {
@@ -262,6 +372,10 @@
         font-size: 1.2em;
       }
 
+      .controls-panel {
+        display: none;
+      }
+
       #mobile-controls {
         display: block;
       }
@@ -269,11 +383,24 @@
       .overlay h1 {
         font-size: 2em;
       }
+
+      .start-controls {
+        gap: 15px;
+      }
+
+      .start-key {
+        width: 36px;
+        height: 36px;
+        font-size: 1em;
+      }
     }
   </style>
 </head>
 
 <body>
+
+  <!-- Music toggle button -->
+  <div id="music-toggle" onclick="toggleMusic()" title="Toggle Music">&#9835;</div>
 
   <!-- Play.fun badge -->
   <div id="playfun-badge">Powered by <span>Play.fun</span></div>
@@ -282,6 +409,28 @@
   <div id="start-screen" class="overlay">
     <h1>TETRIS</h1>
     <p>Stack blocks, clear lines, earn points!</p>
+    <div class="start-controls">
+      <div class="start-control-item">
+        <div class="start-key">&#8592;</div>
+        <div class="start-control-label">Move Left</div>
+      </div>
+      <div class="start-control-item">
+        <div class="start-key">&#8594;</div>
+        <div class="start-control-label">Move Right</div>
+      </div>
+      <div class="start-control-item">
+        <div class="start-key">&#8593;</div>
+        <div class="start-control-label">Rotate</div>
+      </div>
+      <div class="start-control-item">
+        <div class="start-key">&#8595;</div>
+        <div class="start-control-label">Soft Drop</div>
+      </div>
+      <div class="start-control-item">
+        <div class="start-key" style="font-size:0.7em;">ESC</div>
+        <div class="start-control-label">End Game</div>
+      </div>
+    </div>
     <button class="btn" id="start-btn" onclick="startGame()">PLAY</button>
   </div>
 
@@ -314,6 +463,15 @@
       <div class="panel">
         <div class="panel-title">Next</div>
         <canvas id="upcoming-canvas"></canvas>
+      </div>
+      <!-- Controls info panel in sidebar (desktop only) -->
+      <div class="controls-panel">
+        <div class="panel-title">Controls</div>
+        <div class="control-row"><span class="key-badge">&#8592;</span> Move Left</div>
+        <div class="control-row"><span class="key-badge">&#8594;</span> Move Right</div>
+        <div class="control-row"><span class="key-badge">&#8593;</span> Rotate</div>
+        <div class="control-row"><span class="key-badge">&#8595;</span> Soft Drop</div>
+        <div class="control-row"><span class="key-badge">ESC</span> End Game</div>
       </div>
     </div>
   </div>
@@ -381,6 +539,185 @@
     // Game loop control
     var gameLoopRunning = false;
     var gameLoopId = null;
+
+    //=========================================================================
+    // Procedural Background Music (Web Audio API)
+    //=========================================================================
+
+    var audioCtx = null;
+    var musicPlaying = false;
+    var musicNodes = [];
+    var masterGain = null;
+
+    function initAudio() {
+      if (audioCtx) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 0.25;
+        masterGain.connect(audioCtx.destination);
+      } catch(e) {
+        console.warn('Web Audio API not supported');
+      }
+    }
+
+    // Chill lo-fi style melody generator
+    function startMusic() {
+      if (!audioCtx) initAudio();
+      if (!audioCtx) return;
+      if (musicPlaying) return;
+
+      musicPlaying = true;
+      get('music-toggle').classList.add('active');
+
+      // Resume audio context (needed after user interaction)
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      // Pentatonic scale notes for a chill vibe (C minor pentatonic, multiple octaves)
+      var baseNotes = [261.63, 293.66, 311.13, 349.23, 392.00]; // C4, D4, Eb4, F4, G4
+      var bassNotes = [65.41, 73.42, 77.78, 87.31, 98.00]; // C2, D2, Eb2, F2, G2
+      var padNotes  = [130.81, 146.83, 155.56, 174.61, 196.00]; // C3, D3, Eb3, F3, G3
+
+      // --- Ambient pad (sustained chords) ---
+      function playPad() {
+        if (!musicPlaying) return;
+        var now = audioCtx.currentTime;
+        var duration = 4.0;
+
+        // Pick 3 notes for a chord
+        var indices = [0, 2, 4]; // root, minor third, fifth
+        var shift = Math.floor(Math.random() * 3);
+
+        for (var ci = 0; ci < indices.length; ci++) {
+          var noteIdx = (indices[ci] + shift) % padNotes.length;
+          var osc = audioCtx.createOscillator();
+          var gain = audioCtx.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.value = padNotes[noteIdx];
+
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(0.06, now + 0.8);
+          gain.gain.setValueAtTime(0.06, now + duration - 1.0);
+          gain.gain.linearRampToValueAtTime(0, now + duration);
+
+          osc.connect(gain);
+          gain.connect(masterGain);
+          osc.start(now);
+          osc.stop(now + duration);
+          musicNodes.push(osc);
+
+          osc.onended = function() {
+            var idx = musicNodes.indexOf(this);
+            if (idx > -1) musicNodes.splice(idx, 1);
+          };
+        }
+
+        setTimeout(playPad, duration * 1000 - 200);
+      }
+
+      // --- Melody (gentle plucks) ---
+      var melodyStep = 0;
+      function playMelody() {
+        if (!musicPlaying) return;
+        var now = audioCtx.currentTime;
+
+        // Sometimes rest (silence)
+        if (Math.random() < 0.25) {
+          setTimeout(playMelody, 500);
+          return;
+        }
+
+        var noteIdx = Math.floor(Math.random() * baseNotes.length);
+        var freq = baseNotes[noteIdx];
+
+        // Occasionally go up an octave
+        if (Math.random() < 0.3) freq *= 2;
+
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+
+        var dur = 0.3 + Math.random() * 0.4;
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+        osc.connect(gain);
+        gain.connect(masterGain);
+        osc.start(now);
+        osc.stop(now + dur);
+        musicNodes.push(osc);
+
+        osc.onended = function() {
+          var idx = musicNodes.indexOf(this);
+          if (idx > -1) musicNodes.splice(idx, 1);
+        };
+
+        var interval = [250, 375, 500, 500, 750][Math.floor(Math.random() * 5)];
+        melodyStep++;
+        setTimeout(playMelody, interval);
+      }
+
+      // --- Bass line (slow deep notes) ---
+      function playBass() {
+        if (!musicPlaying) return;
+        var now = audioCtx.currentTime;
+
+        var noteIdx = Math.floor(Math.random() * bassNotes.length);
+        var freq = bassNotes[noteIdx];
+
+        var osc = audioCtx.createOscillator();
+        var gain = audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+
+        var dur = 1.5;
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.setValueAtTime(0.08, now + dur * 0.6);
+        gain.gain.linearRampToValueAtTime(0, now + dur);
+
+        osc.connect(gain);
+        gain.connect(masterGain);
+        osc.start(now);
+        osc.stop(now + dur);
+        musicNodes.push(osc);
+
+        osc.onended = function() {
+          var idx = musicNodes.indexOf(this);
+          if (idx > -1) musicNodes.splice(idx, 1);
+        };
+
+        setTimeout(playBass, 2000);
+      }
+
+      // Start all layers
+      playPad();
+      setTimeout(playMelody, 500);
+      setTimeout(playBass, 1000);
+    }
+
+    function stopMusic() {
+      musicPlaying = false;
+      get('music-toggle').classList.remove('active');
+      // Stop all active nodes
+      for (var i = 0; i < musicNodes.length; i++) {
+        try { musicNodes[i].stop(); } catch(e) {}
+      }
+      musicNodes = [];
+    }
+
+    function toggleMusic() {
+      if (musicPlaying) {
+        stopMusic();
+      } else {
+        startMusic();
+      }
+    }
 
     //=========================================================================
     // Play.fun SDK Integration
@@ -485,12 +822,12 @@
     //=========================================================================
 
     function startGameLoop() {
-      if (gameLoopRunning) return; // already running
+      if (gameLoopRunning) return;
       gameLoopRunning = true;
       var last = timestamp();
 
       function frame() {
-        if (!gameLoopRunning) return; // stop if flagged
+        if (!gameLoopRunning) return;
         var now = timestamp();
         update(Math.min(1, (now - last) / 1000.0));
         draw();
@@ -578,6 +915,10 @@
       get('gameover-screen').classList.add('hidden');
       reset();
       playing = true;
+      // Start music automatically on first play
+      if (!musicPlaying) {
+        startMusic();
+      }
       // Ensure game loop is running
       stopGameLoop();
       startGameLoop();
@@ -587,7 +928,9 @@
       get('gameover-screen').classList.add('hidden');
       reset();
       playing = true;
-      // Ensure game loop is running
+      if (!musicPlaying) {
+        startMusic();
+      }
       stopGameLoop();
       startGameLoop();
     }
